@@ -258,7 +258,7 @@ class ABCFontEditor(QWidget):
         self.glyph_record_count = struct.unpack_from("<H", self.original_data, self.charmap_end)[0]
         self.glyph_to_chars = {}
         for codepoint, glyph_index in enumerate(self.charmap):
-            if glyph_index:
+            if glyph_index and glyph_index < self.glyph_record_count:
                 self.glyph_to_chars.setdefault(glyph_index, []).append(codepoint)
         
         # Extract header data (bytes 4-19)
@@ -445,9 +445,35 @@ class ABCFontEditor(QWidget):
             item["cell_width"] = g["cell_width"]
             output.append(item)
     
+        def compact_json(obj, indent=4, _level=0):
+            """Serialize JSON with indent, but keep 'chars' and 'codepoints' arrays inline."""
+            pad = " " * indent * _level
+            inner_pad = " " * indent * (_level + 1)
+            if isinstance(obj, list):
+                if not obj:
+                    return "[]"
+                items = [compact_json(v, indent, _level + 1) for v in obj]
+                return "[\n" + inner_pad + (",\n" + inner_pad).join(items) + "\n" + pad + "]"
+            elif isinstance(obj, dict):
+                if not obj:
+                    return "{}"
+                parts = []
+                for k, v in obj.items():
+                    key_str = json.dumps(k, ensure_ascii=False)
+                    if k in ("chars", "codepoints") and isinstance(v, list):
+                        # Inline: ["x"] or [32]
+                        val_str = "[" + ", ".join(json.dumps(i, ensure_ascii=False) for i in v) + "]"
+                    else:
+                        val_str = compact_json(v, indent, _level + 1)
+                    parts.append(f"{key_str}: {val_str}")
+                return "{\n" + inner_pad + (",\n" + inner_pad).join(parts) + "\n" + pad + "}"
+            else:
+                return json.dumps(obj, ensure_ascii=False)
+
         try:
             with open(export_path, "w", encoding="utf-8") as f:
-                json.dump(output, f, indent=4)
+                f.write(compact_json(output))
+                f.write("\n")
         except Exception as e:
             self.show_error("Error", f"Failed to write JSON file:\n{str(e)}")
             return
@@ -711,7 +737,7 @@ class ABCFontEditor(QWidget):
         self.glyph_record_count = struct.unpack_from("<H", self.original_data, self.charmap_end)[0]
         self.glyph_to_chars = {}
         for codepoint, glyph_index in enumerate(self.charmap):
-            if glyph_index:
+            if glyph_index and glyph_index < self.glyph_record_count:
                 self.glyph_to_chars.setdefault(glyph_index, []).append(codepoint)
 
         self.glyph_height = struct.unpack("<f", self.original_data[4:8])[0]
