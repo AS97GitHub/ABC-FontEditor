@@ -22,7 +22,7 @@
   - Glyph table cleanup
   - Header updates
 - Configurable texture resolution for correct pixel coordinate calculation even without a texture file
-- Zoom support from 10% to 300%
+- Zoom support from 5% to 300%
 - Glyph index overlay visualization directly on the texture
 - All modifications are applied in memory until **Save .abc** is used
 
