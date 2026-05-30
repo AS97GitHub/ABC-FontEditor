@@ -309,8 +309,7 @@ class ABCFontEditor(QWidget):
         self.glyph_record_count = struct.unpack_from("<H", self.original_data, self.charmap_end)[0]
         self.glyph_to_chars = {}
         for codepoint, glyph_index in enumerate(self.charmap):
-            # Charmap value 0 = not assigned (glyph record [0] is still parsed separately).
-            if 0 < glyph_index < self.glyph_record_count:
+            if 0 <= glyph_index < self.glyph_record_count:
                 self.glyph_to_chars.setdefault(glyph_index, []).append(codepoint)
         
         # Extract header data (bytes 4-19)
@@ -373,7 +372,7 @@ class ABCFontEditor(QWidget):
         filter_row.addWidget(filter_input, stretch=1)
         mapped_only_cb = QCheckBox("Mapped only")
         mapped_only_cb.setStyleSheet("color: white;")
-        mapped_only_cb.setChecked(self.charmap_count > 512)
+        mapped_only_cb.setChecked(True)
         filter_row.addWidget(mapped_only_cb)
         layout.addLayout(filter_row)
 
@@ -572,13 +571,32 @@ class ABCFontEditor(QWidget):
                 "trailing_data_hex": getattr(self, "trailing_data", b"").hex(" ")
             }
         })
+        CHARS_LIMIT = 40
         for g in self.glyphs:
+            chars_list = g.get("chars", [])
+            codepoints_list = g.get("codepoints", [])
+            if len(chars_list) > CHARS_LIMIT:
+                chars_val = f"({len(chars_list)} chars total, omitted)"
+                cp_val = f"({len(codepoints_list)} codepoints total, omitted)"
+            else:
+                # Replace control chars, surrogates with U+XXXX notation
+                safe_chars = []
+                for ch in chars_list:
+                    cp = ord(ch)
+                    if cp < 0x20 or cp == 0x7F or (0xD800 <= cp <= 0xDFFF):
+                        safe_chars.append(f"U+{cp:04X}")
+                    elif cp == 0x20:
+                        safe_chars.append("Space")
+                    else:
+                        safe_chars.append(ch)
+                chars_val = safe_chars
+                cp_val = [f"U+{cp:04X}" for cp in codepoints_list]
             item = {
                 "index": g["index"],
                 "hex": g["hex"],
                 "unknown_data": g.get("unknown_data", 0),  # not studied
-                "chars": g.get("chars", []),
-                "codepoints": g.get("codepoints", []),
+                "chars": chars_val,
+                "codepoints": cp_val,
             }
             if use_uv:
                 item["uv_x_start"] = g["uv_x_start"]
@@ -911,8 +929,7 @@ class ABCFontEditor(QWidget):
         self.glyph_record_count = struct.unpack_from("<H", self.original_data, self.charmap_end)[0]
         self.glyph_to_chars = {}
         for codepoint, glyph_index in enumerate(self.charmap):
-            # Charmap value 0 = not assigned (glyph record [0] is still parsed separately).
-            if 0 < glyph_index < self.glyph_record_count:
+            if 0 <= glyph_index < self.glyph_record_count:
                 self.glyph_to_chars.setdefault(glyph_index, []).append(codepoint)
 
         self.glyph_height = struct.unpack("<f", self.original_data[4:8])[0]
@@ -974,7 +991,8 @@ class ABCFontEditor(QWidget):
         dlg = QDialog(self)
         dlg.setWindowTitle(f"Edit Glyph {glyph['index']}")
         dlg.setStyleSheet("background-color: #202020; color: white;")
-        dlg.resize(420, 260)
+        dlg.setFixedWidth(460)
+        dlg.resize(460, 260)
         layout = QVBoxLayout(dlg)
 
         px_row = QHBoxLayout()
@@ -1013,12 +1031,110 @@ class ABCFontEditor(QWidget):
 
         chars = glyph.get("chars", [])
         codepoints = glyph.get("codepoints", [])
-        chars_str = "".join(chars) if chars else "(none)"
-        codepoints_str = " ".join(f"U+{cp:04X}" for cp in codepoints) if codepoints else "(none)"
 
-        chars_label = QLabel(f"Chars: {chars_str}   Codepoints: {codepoints_str}")
+        MAX_PREVIEW = 10
+
+        def chars_to_str(lst):
+            """Show printable characters only; skip control chars (U+0000-U+001F, U+007F) and surrogates."""
+            if not lst:
+                return "(none)"
+            parts = []
+            for ch in lst:
+                cp = ord(ch)
+                if cp == 0x20:
+                    parts.append("Space")
+                elif cp < 0x20 or cp == 0x7F or (0xD800 <= cp <= 0xDFFF):
+                    pass  # skip control/surrogate chars — shown in codepoints only
+                else:
+                    parts.append(ch)
+            return " ".join(parts) if parts else "(only control chars)"
+
+        def codepoints_to_str(lst):
+            if not lst:
+                return "(none)"
+            normal = [cp for cp in lst if cp >= 0x20 and cp != 0x7F and not (0xD800 <= cp <= 0xDFFF)]
+            control = [cp for cp in lst if cp < 0x20 or cp == 0x7F or (0xD800 <= cp <= 0xDFFF)]
+            parts = [f"U+{cp:04X}" for cp in normal]
+            if control:
+                ctrl_str = "  [control: " + " ".join(f"U+{cp:04X}" for cp in control) + "]"
+                parts.append(ctrl_str)
+            return " ".join(parts) if parts else "(none)"
+
+        def open_full_dialog(title, content):
+            fd = QDialog(dlg)
+            fd.setWindowTitle(title)
+            fd.setStyleSheet("background-color: #202020; color: white;")
+            fd.resize(480, 320)
+            fl = QVBoxLayout(fd)
+            te = QTextEdit()
+            te.setReadOnly(True)
+            te.setPlainText(content)
+            te.setStyleSheet("background-color: #2a2a2a; color: #ddd;")
+            fl.addWidget(te)
+            close_btn = QDialogButtonBox(QDialogButtonBox.Close)
+            close_btn.rejected.connect(fd.reject)
+            fl.addWidget(close_btn)
+            fd.exec_()
+
+        # For chars preview: take first MAX_PREVIEW printable chars (skip control/surrogates)
+        def is_printable(ch):
+            cp = ord(ch)
+            return not (cp < 0x20 or cp == 0x7F or (0xD800 <= cp <= 0xDFFF))
+
+        printable_chars = [ch for ch in chars if is_printable(ch)]
+        chars_preview = printable_chars[:MAX_PREVIEW]
+        has_more_printable = len(printable_chars) > MAX_PREVIEW
+
+        # For codepoints preview: first MAX_PREVIEW normal ones; if none — show control ones
+        normal_cps = [cp for cp in codepoints if cp >= 0x20 and cp != 0x7F and not (0xD800 <= cp <= 0xDFFF)]
+        control_cps = [cp for cp in codepoints if cp < 0x20 or cp == 0x7F or (0xD800 <= cp <= 0xDFFF)]
+        if normal_cps:
+            codepoints_preview = normal_cps[:MAX_PREVIEW]
+        else:
+            codepoints_preview = control_cps[:MAX_PREVIEW]
+        has_more_codepoints = len(normal_cps) > MAX_PREVIEW
+
+        # Chars row
+        chars_row = QHBoxLayout()
+        chars_label = QLabel(f"Chars: {chars_to_str(chars_preview)}"
+                             + (" …" if has_more_printable else ""))
         chars_label.setStyleSheet("color: #aaa;")
-        layout.addWidget(chars_label)
+        chars_label.setWordWrap(True)
+        chars_label.setMinimumWidth(300)
+        chars_row.addWidget(chars_label, stretch=1)
+        if has_more_printable:
+            show_chars_btn = QPushButton("Show all")
+            show_chars_btn.setFixedWidth(70)
+            show_chars_btn.setStyleSheet("background-color: #333; color: white;")
+            def _show_all_chars(_, full=chars):
+                open_full_dialog(
+                    f"All chars — Glyph {glyph['index']} ({len(printable_chars)} printable)",
+                    chars_to_str(full)
+                )
+            show_chars_btn.clicked.connect(_show_all_chars)
+            chars_row.addWidget(show_chars_btn)
+        layout.addLayout(chars_row)
+
+        # Codepoints row
+        codepoints_row = QHBoxLayout()
+        codepoints_label = QLabel(f"Codepoints: {codepoints_to_str(codepoints_preview)}"
+                                  + (" …" if has_more_codepoints else ""))
+        codepoints_label.setStyleSheet("color: #aaa;")
+        codepoints_label.setWordWrap(True)
+        codepoints_label.setMinimumWidth(300)
+        codepoints_row.addWidget(codepoints_label, stretch=1)
+        if has_more_codepoints or len(codepoints) > len(normal_cps):
+            show_cp_btn = QPushButton("Show all")
+            show_cp_btn.setFixedWidth(70)
+            show_cp_btn.setStyleSheet("background-color: #333; color: white;")
+            def _show_all_cp(_, full=codepoints):
+                open_full_dialog(
+                    f"All codepoints — Glyph {glyph['index']} ({len(full)} total)",
+                    codepoints_to_str(full)
+                )
+            show_cp_btn.clicked.connect(_show_all_cp)
+            codepoints_row.addWidget(show_cp_btn)
+        layout.addLayout(codepoints_row)
 
         # ── Char management section ──────────────────────────────────────
         sep = QLabel("── Manage symbols mapped to this glyph ──")
@@ -1262,38 +1378,38 @@ class ABCFontEditor(QWidget):
             index for index in glyph_indexes_to_delete
             if 0 <= index < old_record_count
         }
-        protected_indices = {0}
-        protected_requested = valid_index_deleted & protected_indices
-        valid_index_deleted -= protected_indices
 
         if not mapped_deleted and not valid_index_deleted:
             message = "No entered symbols or glyph indexes are mapped in this ABC file."
-            if protected_requested:
-                message += "\nIndex 0 is protected."
             self.show_warning("No Matches", message)
             return
 
-        new_charmap = old_charmap[:]
-        for codepoint in mapped_deleted:
-            new_charmap[codepoint] = 0
-        for i, value in enumerate(new_charmap):
-            if value in valid_index_deleted:
-                new_charmap[i] = 0
+        # Build the set of glyph indices to remove:
+        # from codepoints: whatever glyph index those codepoints map to
+        # from explicit index list: directly
+        glyph_indices_from_symbols = {old_charmap[cp] for cp in mapped_deleted}
+        indices_to_delete = glyph_indices_from_symbols | valid_index_deleted
+
+        # All glyph indices that survive
+        keep_old_indices = sorted(
+            i for i in range(old_record_count) if i not in indices_to_delete
+        )
+        index_map = {old_index: new_index for new_index, old_index in enumerate(keep_old_indices)}
 
         old_records = [
             self.original_data[old_records_start + i * 24:old_records_start + (i + 1) * 24]
             for i in range(old_record_count)
         ]
 
-        keep_old_indices = {0}
-        keep_old_indices.update(value for value in new_charmap if value)
-        keep_old_indices.difference_update(valid_index_deleted)
-        keep_old_indices.update(protected_indices)
-        keep_old_indices = sorted(i for i in keep_old_indices if 0 <= i < old_record_count)
-        index_map = {old_index: new_index for new_index, old_index in enumerate(keep_old_indices)}
-
+        # Rebuild charmap: zero out deleted codepoints, remap remaining indices
+        new_charmap = old_charmap[:]
+        for cp in mapped_deleted:
+            new_charmap[cp] = 0
         for i, value in enumerate(new_charmap):
-            new_charmap[i] = index_map.get(value, 0) if value else 0
+            if value in indices_to_delete:
+                new_charmap[i] = 0
+            elif value in index_map:
+                new_charmap[i] = index_map[value]
 
         while len(new_charmap) > 1 and new_charmap[-1] == 0:
             new_charmap.pop()
@@ -1501,7 +1617,13 @@ class ABCFontEditor(QWidget):
                 index_text = str(g["index"])
                 chars = g.get("chars") or []
                 if chars and (x1 - x0) >= 28:
-                    ch = chars[0] if ord(chars[0]) >= 32 else f"U+{g['codepoints'][0]:04X}"
+                    cp0 = ord(chars[0])
+                    if cp0 == 0x20:
+                        ch = "Spc"
+                    elif cp0 < 0x20 or cp0 == 0x7F:
+                        ch = f"U+{cp0:04X}"
+                    else:
+                        ch = chars[0]
                     index_text = f"{g['index']}:{ch}"
                 self._add_outlined_index_label(index_text, font, x0 + 2, y0 + 2)
 
