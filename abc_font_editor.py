@@ -147,7 +147,7 @@ class ABCFontEditor(QWidget):
         top_row.addSpacing(20)
 
         for btn in [self.offset_up, self.offset_down, self.apply_offset_btn, self.apply_texture_btn]:
-            btn.setStyleSheet("background-color: #333333; color: white;")
+            btn.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; } QPushButton:disabled { background-color: #2a2a2a; color: #666666; }")
 
         top_row.addStretch()
 
@@ -175,7 +175,7 @@ class ABCFontEditor(QWidget):
         top_row.addWidget(self.fit_view_btn)
         
         for btn in [self.zoom_out_btn, self.zoom_in_btn, self.fit_view_btn]:
-            btn.setStyleSheet("background-color: #333333; color: white;")
+            btn.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; } QPushButton:disabled { background-color: #2a2a2a; color: #666666; }")
 
         layout.addLayout(top_row)
 
@@ -192,6 +192,7 @@ class ABCFontEditor(QWidget):
         self.load_texture_btn = QPushButton("Load Texture")
         self.load_abc_btn = QPushButton("Load .abc")
         self.charmap_table_btn = QPushButton("Charmap")
+        self.global_params_btn = QPushButton("Global Params")
         self.export_json_btn = QPushButton("Export to JSON")
         self.import_json_btn = QPushButton("Import from JSON")
         self.delete_symbols_btn = QPushButton("Delete Symbols")
@@ -199,11 +200,12 @@ class ABCFontEditor(QWidget):
         self.save_abc_btn = QPushButton("Save .abc")
         for btn in [
             self.load_texture_btn, self.load_abc_btn, self.charmap_table_btn,
-            self.export_json_btn, self.import_json_btn, self.delete_symbols_btn,
-            self.add_symbol_btn, self.save_abc_btn,
+            self.global_params_btn, self.export_json_btn, self.import_json_btn,
+            self.delete_symbols_btn, self.add_symbol_btn, self.save_abc_btn,
         ]:
-            btn.setStyleSheet("background-color: #333333; color: white;")
+            btn.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; } QPushButton:disabled { background-color: #2a2a2a; color: #666666; }")
         self.charmap_table_btn.setEnabled(False)
+        self.global_params_btn.setEnabled(False)
         self.export_json_btn.setEnabled(False)
         self.import_json_btn.setEnabled(False)
         self.delete_symbols_btn.setEnabled(False)
@@ -213,6 +215,7 @@ class ABCFontEditor(QWidget):
         bottom_row.addWidget(self.load_texture_btn)
         bottom_row.addWidget(self.load_abc_btn)
         bottom_row.addWidget(self.charmap_table_btn)
+        bottom_row.addWidget(self.global_params_btn)
         bottom_row.addWidget(self.export_json_btn)
         bottom_row.addWidget(self.import_json_btn)
         bottom_row.addWidget(self.delete_symbols_btn)
@@ -227,6 +230,7 @@ class ABCFontEditor(QWidget):
         self.import_json_btn.clicked.connect(self.import_json)
         self.delete_symbols_btn.clicked.connect(self.delete_symbols)
         self.add_symbol_btn.clicked.connect(self.add_symbol)
+        self.global_params_btn.clicked.connect(self.edit_global_params)
         self.save_abc_btn.clicked.connect(self.save_abc)
 
     def load_texture(self):
@@ -316,7 +320,7 @@ class ABCFontEditor(QWidget):
         self.glyph_height = struct.unpack("<f", self.original_data[4:8])[0]
         self.unknown_data_h1 = struct.unpack("<f", self.original_data[8:12])[0]
         self.unknown_data_h2 = struct.unpack("<f", self.original_data[12:16])[0]
-        self.unknown_data_h3 = struct.unpack("<f", self.original_data[16:20])[0]
+        self.line_height = struct.unpack("<f", self.original_data[16:20])[0]
         self.offset_dec = self.charmap_end + 2  # First glyph offset
         self.offset_input.setText(str(self.offset_dec))
         self.manual_offset = False
@@ -327,6 +331,7 @@ class ABCFontEditor(QWidget):
         self.offsets_label.setText("")
 
         self.charmap_table_btn.setEnabled(True)
+        self.global_params_btn.setEnabled(True)
         self.export_json_btn.setEnabled(True)
         self.import_json_btn.setEnabled(True)
         self.delete_symbols_btn.setEnabled(True)
@@ -426,7 +431,26 @@ class ABCFontEditor(QWidget):
         mapped_only_cb.stateChanged.connect(lambda: apply_filter())
         apply_filter()
 
+        def on_row_double_clicked(row, col):
+            glyph_item = table.item(row, 3)
+            if not glyph_item:
+                return
+            try:
+                glyph_index = int(glyph_item.text())
+            except ValueError:
+                return
+            glyph = next((g for g in self.glyphs if g["index"] == glyph_index), None)
+            if glyph:
+                self.edit_glyph(glyph)
+
+        table.cellDoubleClicked.connect(on_row_double_clicked)
+
+        hint = QLabel("Double-click a row to edit the glyph.")
+        hint.setStyleSheet("color: #666; font-size: 10px;")
+        layout.addWidget(hint)
+
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        buttons.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; }")
         buttons.rejected.connect(dlg.reject)
         layout.addWidget(buttons)
         dlg.exec_()
@@ -452,8 +476,8 @@ class ABCFontEditor(QWidget):
             if len(entry) < 24:
                 break
             try:
-                # Correct structure: unknown_data (2 bytes), UV coordinates (16 bytes), padding/width/cell_width (6 bytes)
-                unknown_data = struct.unpack("<H", entry[:2])[0]
+                # Correct structure: row_hint (2 bytes), UV coordinates (16 bytes), padding/width/cell_width (6 bytes)
+                row_hint = struct.unpack("<H", entry[:2])[0]
                 x0, y0, x1, y1 = struct.unpack("<ffff", entry[2:18])
                 padding_left, width, cell_width = struct.unpack("<hHH", entry[18:24])
             except struct.error:
@@ -470,7 +494,7 @@ class ABCFontEditor(QWidget):
             glyph = {
                 "index": index,
                 "cell_width": cell_width,
-                "unknown_data": unknown_data,  # not studied
+                "row_hint": row_hint,  # tool artifact - texture row index as float16
                 "chars": [chr(c) for c in self.glyph_to_chars.get(index, [])],
                 "codepoints": self.glyph_to_chars.get(index, []),
                 "uv_x_start": x0, "uv_y_start": y0, "uv_x_end": x1, "uv_y_end": y1,
@@ -505,7 +529,7 @@ class ABCFontEditor(QWidget):
                 super().__init__()
                 self.setWindowTitle("Export Coordinate Format")
                 self.setStyleSheet("background-color: #202020; color: white;")
-                self.setFixedSize(200, 80)
+                self.setFixedSize(200, 70)
                 layout = QVBoxLayout()
     
                 label = QLabel("Choose coordinate export format:")
@@ -517,7 +541,7 @@ class ABCFontEditor(QWidget):
                 self.uv_btn = QPushButton("UV (0.0–1.0)")
                 self.px_btn = QPushButton("Pixel")
                 for btn in (self.uv_btn, self.px_btn):
-                    btn.setStyleSheet("background-color: #333333; color: white;")
+                    btn.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; } QPushButton:disabled { background-color: #2a2a2a; color: #666666; }")
                     btn.setFixedWidth(85)
                     btn_row.addWidget(btn)
                 layout.addLayout(btn_row)
@@ -552,7 +576,7 @@ class ABCFontEditor(QWidget):
                 "_padding_left": "Left padding width before glyph (can be negative for kerning)",
                 "_glyph_width": "Width of the glyph/symbol in pixels",
                 "_cell_width": "Total width allocated for the glyph cell",
-                "_unknown_data": "Unknown 2-byte field preserved by import/export",
+                "_row_hint": "Tool artifact - texture row index stored as float16",
                 "_chars": "Characters that map to this glyph through the ABC character map",
                 "_codepoints": "Unicode codepoints that map to this glyph"
             }
@@ -563,7 +587,7 @@ class ABCFontEditor(QWidget):
                 "glyph_height": self.glyph_height,
                 "unknown_data_h1": self.unknown_data_h1,
                 "unknown_data_h2": self.unknown_data_h2,
-                "unknown_data_h3": self.unknown_data_h3,
+                "line_height": self.line_height,
                 "charmap_max_codepoint": getattr(self, "charmap_max_codepoint", 0),
                 "charmap_count": getattr(self, "charmap_count", 0),
                 "charmap_nonzero_count": sum(1 for v in getattr(self, "charmap", []) if v),
@@ -594,7 +618,7 @@ class ABCFontEditor(QWidget):
             item = {
                 "index": g["index"],
                 "hex": g["hex"],
-                "unknown_data": g.get("unknown_data", 0),  # not studied
+                "row_hint": g.get("row_hint", 0),  # tool artifact - texture row index as float16
                 "chars": chars_val,
                 "codepoints": cp_val,
             }
@@ -735,8 +759,10 @@ class ABCFontEditor(QWidget):
         dlg.resize(400, 220)
         layout = QVBoxLayout(dlg)
 
+        LABEL_W = 85  # adjust to move input fields left/right
+
         symbol_row = QHBoxLayout()
-        symbol_row.addWidget(QLabel("Symbol 1:"))
+        _lbl = QLabel("Symbol 1:"); _lbl.setFixedWidth(LABEL_W); symbol_row.addWidget(_lbl)
         symbol_input = QLineEdit()
         symbol_input.setPlaceholderText("Optional: А or U+0410 or 0xC0")
         symbol_input.setStyleSheet("background-color: #333; color: white;")
@@ -744,7 +770,7 @@ class ABCFontEditor(QWidget):
         layout.addLayout(symbol_row)
 
         symbol2_row = QHBoxLayout()
-        symbol2_row.addWidget(QLabel("Symbol 2:"))
+        _lbl = QLabel("Symbol 2:"); _lbl.setFixedWidth(LABEL_W); symbol2_row.addWidget(_lbl)
         symbol2_input = QLineEdit()
         symbol2_input.setPlaceholderText("Optional: second char on same glyph")
         symbol2_input.setStyleSheet("background-color: #333; color: white;")
@@ -752,7 +778,7 @@ class ABCFontEditor(QWidget):
         layout.addLayout(symbol2_row)
 
         copy_row = QHBoxLayout()
-        copy_row.addWidget(QLabel("Copy glyph index:"))
+        _lbl = QLabel("Copy glyph index:"); _lbl.setFixedWidth(LABEL_W); copy_row.addWidget(_lbl)
         copy_index_input = QSpinBox()
         copy_index_input.setRange(0, max(0, getattr(self, "glyph_record_count", len(self.glyphs)) - 1))
         copy_index_input.setValue(0)
@@ -761,7 +787,7 @@ class ABCFontEditor(QWidget):
         layout.addLayout(copy_row)
 
         rect_row = QHBoxLayout()
-        rect_row.addWidget(QLabel("Pixel rect:"))
+        _lbl = QLabel("Pixel rect:"); _lbl.setFixedWidth(LABEL_W); rect_row.addWidget(_lbl)
         rect_input = QLineEdit()
         rect_input.setPlaceholderText("Optional: x_start y_start x_end y_end")
         rect_input.setStyleSheet("background-color: #333; color: white;")
@@ -769,7 +795,7 @@ class ABCFontEditor(QWidget):
         layout.addLayout(rect_row)
 
         metrics_row = QHBoxLayout()
-        metrics_row.addWidget(QLabel("Metrics:"))
+        _lbl = QLabel("Metrics:"); _lbl.setFixedWidth(LABEL_W); metrics_row.addWidget(_lbl)
         metrics_input = QLineEdit()
         metrics_input.setPlaceholderText("Optional: padding_left glyph_width cell_width")
         metrics_input.setStyleSheet("background-color: #333; color: white;")
@@ -781,6 +807,7 @@ class ABCFontEditor(QWidget):
         layout.addWidget(hint)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; }")
         buttons.accepted.connect(dlg.accept)
         buttons.rejected.connect(dlg.reject)
         layout.addWidget(buttons)
@@ -935,7 +962,7 @@ class ABCFontEditor(QWidget):
         self.glyph_height = struct.unpack("<f", self.original_data[4:8])[0]
         self.unknown_data_h1 = struct.unpack("<f", self.original_data[8:12])[0]
         self.unknown_data_h2 = struct.unpack("<f", self.original_data[12:16])[0]
-        self.unknown_data_h3 = struct.unpack("<f", self.original_data[16:20])[0]
+        self.line_height = struct.unpack("<f", self.original_data[16:20])[0]
         self.offset_dec = self.charmap_end + 2
         self.offset_input.setText(str(self.offset_dec))
         self.manual_offset = False
@@ -969,6 +996,61 @@ class ABCFontEditor(QWidget):
         self.dirty = False
         self.show_info("Saved", f"Saved to:\n{save_path}")
 
+    def edit_global_params(self):
+        if not self.original_data:
+            self.show_warning("No Data", "Load a .abc file first.")
+            return
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Global Parameters")
+        dlg.setStyleSheet("background-color: #202020; color: white;")
+        dlg.setFixedWidth(340)
+        layout = QVBoxLayout(dlg)
+
+        LABEL_W = 63  # adjust to move input fields left/right
+
+        fields = [
+            ("Glyph Height",  "glyph_height",      4,  8),
+            ("Unknown H1",    "unknown_data_h1",    8,  12),
+            ("Unknown H2",    "unknown_data_h2",    12, 16),
+            ("Line height",   "line_height",    16, 20),
+        ]
+
+        inputs = {}
+        for label, attr, start, end in fields:
+            row = QHBoxLayout()
+            lbl = QLabel(f"{label}:")
+            lbl.setFixedWidth(LABEL_W)
+            row.addWidget(lbl)
+            val = getattr(self, attr, struct.unpack("<f", self.original_data[start:end])[0])
+            inp = QLineEdit(f"{val:.6g}")
+            inp.setStyleSheet("background-color: #333; color: white;")
+            row.addWidget(inp)
+            layout.addLayout(row)
+            inputs[attr] = (inp, start, end)
+
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btns.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; }")
+        layout.addWidget(btns)
+
+        def on_accept():
+            new_data = bytearray(self.original_data)
+            for attr, (inp, start, end) in inputs.items():
+                try:
+                    value = float(inp.text().strip())
+                except ValueError:
+                    self.show_error("Invalid Value", f"'{inp.text()}' is not a valid number.")
+                    return
+                struct.pack_into("<f", new_data, start, value)
+                setattr(self, attr, value)
+            self.original_data = bytes(new_data)
+            self.dirty = True
+            dlg.accept()
+
+        btns.accepted.connect(on_accept)
+        btns.rejected.connect(dlg.reject)
+        dlg.exec_()
+
     def handle_view_double_click(self, event):
         if not self.glyphs:
             return
@@ -995,8 +1077,12 @@ class ABCFontEditor(QWidget):
         dlg.resize(460, 260)
         layout = QVBoxLayout(dlg)
 
+        LABEL_W = 76  # adjust this to move input fields left/right
+
         px_row = QHBoxLayout()
-        px_row.addWidget(QLabel("Pixel rect:"))
+        px_lbl = QLabel("Pixel rect:")
+        px_lbl.setFixedWidth(LABEL_W)
+        px_row.addWidget(px_lbl)
         px_input = QLineEdit(
             f"{glyph['px_x_start']} {glyph['px_y_start']} {glyph['px_x_end']} {glyph['px_y_end']}"
         )
@@ -1005,7 +1091,9 @@ class ABCFontEditor(QWidget):
         layout.addLayout(px_row)
 
         uv_row = QHBoxLayout()
-        uv_row.addWidget(QLabel("UV rect:"))
+        uv_lbl = QLabel("UV rect:")
+        uv_lbl.setFixedWidth(LABEL_W)
+        uv_row.addWidget(uv_lbl)
         uv_input = QLineEdit(
             f"{glyph['uv_x_start']:.9f} {glyph['uv_y_start']:.9f} {glyph['uv_x_end']:.9f} {glyph['uv_y_end']:.9f}"
         )
@@ -1014,7 +1102,9 @@ class ABCFontEditor(QWidget):
         layout.addLayout(uv_row)
 
         metrics_row = QHBoxLayout()
-        metrics_row.addWidget(QLabel("Metrics:"))
+        metrics_lbl = QLabel("Metrics:")
+        metrics_lbl.setFixedWidth(LABEL_W)
+        metrics_row.addWidget(metrics_lbl)
         metrics_input = QLineEdit(
             f"{glyph['padding_left']} {glyph['glyph_width']} {glyph['cell_width']}"
         )
@@ -1023,8 +1113,10 @@ class ABCFontEditor(QWidget):
         layout.addLayout(metrics_row)
 
         unknown_row = QHBoxLayout()
-        unknown_row.addWidget(QLabel("Unknown:"))
-        unknown_input = QLineEdit(str(glyph.get("unknown_data", 0)))
+        unknown_lbl = QLabel("Row hint:")
+        unknown_lbl.setFixedWidth(LABEL_W)
+        unknown_row.addWidget(unknown_lbl)
+        unknown_input = QLineEdit(str(glyph.get("row_hint", 0)))
         unknown_input.setStyleSheet("background-color: #333; color: white;")
         unknown_row.addWidget(unknown_input)
         layout.addLayout(unknown_row)
@@ -1060,18 +1152,102 @@ class ABCFontEditor(QWidget):
                 parts.append(ctrl_str)
             return " ".join(parts) if parts else "(none)"
 
-        def open_full_dialog(title, content):
+        def open_full_dialog(title, codepoints_list):
             fd = QDialog(dlg)
             fd.setWindowTitle(title)
             fd.setStyleSheet("background-color: #202020; color: white;")
-            fd.resize(480, 320)
+            fd.resize(480, 500)
             fl = QVBoxLayout(fd)
-            te = QTextEdit()
-            te.setReadOnly(True)
-            te.setPlainText(content)
-            te.setStyleSheet("background-color: #2a2a2a; color: #ddd;")
-            fl.addWidget(te)
+
+            # Summary
+            total = len(codepoints_list)
+            ctrl_count = sum(1 for cp in codepoints_list if cp < 0x20 or cp == 0x7F or (0xD800 <= cp <= 0xDFFF))
+            summary_lbl = QLabel(f"Total: {total}  ·  Printable: {total - ctrl_count}  ·  Control: {ctrl_count}")
+            summary_lbl.setStyleSheet("color: #aaa;")
+            fl.addWidget(summary_lbl)
+
+            # Filter
+            filter_row = QHBoxLayout()
+            filter_input = QLineEdit()
+            filter_input.setPlaceholderText("Filter: char, U+0041, 65…")
+            filter_input.setStyleSheet("background-color: #333; color: white;")
+            filter_row.addWidget(filter_input, stretch=1)
+            ctrl_cb = QCheckBox("Hide control")
+            ctrl_cb.setStyleSheet("color: white;")
+            ctrl_cb.setChecked(True)
+            filter_row.addWidget(ctrl_cb)
+            fl.addLayout(filter_row)
+
+            # Table
+            tbl = QTableWidget()
+            tbl.setColumnCount(4)
+            tbl.setHorizontalHeaderLabels(["Dec", "Unicode", "Char", "Type"])
+            tbl.setStyleSheet(
+                "QTableWidget { background-color: #2a2a2a; color: white; gridline-color: #444; }"
+                "QHeaderView::section { background-color: #333; color: white; padding: 4px; }"
+            )
+            tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
+            tbl.setSelectionBehavior(QAbstractItemView.SelectRows)
+            tbl.setSelectionMode(QAbstractItemView.SingleSelection)
+            tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+            tbl.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+            tbl.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+            tbl.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+            tbl.verticalHeader().setVisible(False)
+            fl.addWidget(tbl)
+
+            count_lbl = QLabel()
+            count_lbl.setStyleSheet("color: #888;")
+            fl.addWidget(count_lbl)
+
+            # Build rows data
+            rows_data = []
+            for cp in codepoints_list:
+                uni = f"U+{cp:04X}"
+                is_ctrl = cp < 0x20 or cp == 0x7F or (0xD800 <= cp <= 0xDFFF)
+                if cp == 0x20:
+                    char_str = "Space"
+                    type_str = "Printable"
+                elif is_ctrl:
+                    char_str = ""
+                    type_str = "Control"
+                elif 0xD800 <= cp <= 0xDFFF:
+                    char_str = ""
+                    type_str = "Surrogate"
+                else:
+                    try:
+                        char_str = chr(cp)
+                    except (ValueError, OverflowError):
+                        char_str = ""
+                    type_str = "Printable"
+                rows_data.append((cp, uni, char_str, type_str, is_ctrl))
+
+            def apply_filter():
+                needle = filter_input.text().strip().lower()
+                tbl.setRowCount(0)
+                visible = 0
+                for cp, uni, char_str, type_str, is_ctrl in rows_data:
+                    if ctrl_cb.isChecked() and is_ctrl:
+                        continue
+                    haystack = f"{cp} {uni} {char_str} {type_str}".lower()
+                    if needle and needle not in haystack:
+                        continue
+                    row = tbl.rowCount()
+                    tbl.insertRow(row)
+                    for col, text in enumerate((str(cp), uni, char_str, type_str)):
+                        item = QTableWidgetItem(text)
+                        if is_ctrl:
+                            item.setForeground(QColor(0x88, 0x88, 0x88))
+                        tbl.setItem(row, col, item)
+                    visible += 1
+                count_lbl.setText(f"Showing {visible} of {total} entries")
+
+            filter_input.textChanged.connect(apply_filter)
+            ctrl_cb.stateChanged.connect(lambda: apply_filter())
+            apply_filter()
+
             close_btn = QDialogButtonBox(QDialogButtonBox.Close)
+            close_btn.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; } QPushButton:disabled { background-color: #2a2a2a; color: #666666; }")
             close_btn.rejected.connect(fd.reject)
             fl.addWidget(close_btn)
             fd.exec_()
@@ -1108,8 +1284,8 @@ class ABCFontEditor(QWidget):
             show_chars_btn.setStyleSheet("background-color: #333; color: white;")
             def _show_all_chars(_, full=chars):
                 open_full_dialog(
-                    f"All chars — Glyph {glyph['index']} ({len(printable_chars)} printable)",
-                    chars_to_str(full)
+                    f"Chars — Glyph {glyph['index']}",
+                    [ord(ch) for ch in full]
                 )
             show_chars_btn.clicked.connect(_show_all_chars)
             chars_row.addWidget(show_chars_btn)
@@ -1129,8 +1305,8 @@ class ABCFontEditor(QWidget):
             show_cp_btn.setStyleSheet("background-color: #333; color: white;")
             def _show_all_cp(_, full=codepoints):
                 open_full_dialog(
-                    f"All codepoints — Glyph {glyph['index']} ({len(full)} total)",
-                    codepoints_to_str(full)
+                    f"Codepoints — Glyph {glyph['index']}",
+                    full
                 )
             show_cp_btn.clicked.connect(_show_all_cp)
             codepoints_row.addWidget(show_cp_btn)
@@ -1141,24 +1317,35 @@ class ABCFontEditor(QWidget):
         sep.setStyleSheet("color: #666; font-size: 10px;")
         layout.addWidget(sep)
 
+        from PyQt5.QtGui import QPalette
+
+        def make_dark_input(placeholder):
+            w = QLineEdit()
+            w.setPlaceholderText(placeholder)
+            pal = w.palette()
+            pal.setColor(QPalette.Base, QColor(0x33, 0x33, 0x33))
+            pal.setColor(QPalette.Text, QColor(0xFF, 0xFF, 0xFF))
+            pal.setColor(QPalette.PlaceholderText, QColor(0x88, 0x88, 0x88))
+            w.setPalette(pal)
+            w.setStyleSheet("background-color: #333; color: white;")
+            return w
+
         add_char_row = QHBoxLayout()
-        add_char_row.addWidget(QLabel("Add symbol:"))
-        add_char_input = QLineEdit()
-        add_char_input.setPlaceholderText("Char, U+XXXX or 0xXX  (adds extra mapping)")
-        add_char_input.setStyleSheet("background-color: #333; color: white;")
+        add_lbl = QLabel("Add symbol:")
+        add_lbl.setFixedWidth(LABEL_W)
+        add_char_row.addWidget(add_lbl)
+        add_char_input = make_dark_input("Char, U+XXXX or 0xXX  (adds extra mapping)")
         add_char_row.addWidget(add_char_input)
         layout.addLayout(add_char_row)
 
         replace_char_row = QHBoxLayout()
-        replace_char_row.addWidget(QLabel("Replace symbol:"))
-        replace_old_input = QLineEdit()
-        replace_old_input.setPlaceholderText("Old char / U+XXXX")
-        replace_old_input.setStyleSheet("background-color: #333; color: white;")
+        replace_lbl = QLabel("Replace symbol:")
+        replace_lbl.setFixedWidth(LABEL_W)
+        replace_char_row.addWidget(replace_lbl)
+        replace_old_input = make_dark_input("Old char / U+XXXX")
         replace_char_row.addWidget(replace_old_input)
         replace_char_row.addWidget(QLabel("→"))
-        replace_new_input = QLineEdit()
-        replace_new_input.setPlaceholderText("New char / U+XXXX")
-        replace_new_input.setStyleSheet("background-color: #333; color: white;")
+        replace_new_input = make_dark_input("New char / U+XXXX")
         replace_char_row.addWidget(replace_new_input)
         layout.addLayout(replace_char_row)
 
@@ -1172,6 +1359,7 @@ class ABCFontEditor(QWidget):
         layout.addWidget(hint)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; }")
         buttons.accepted.connect(dlg.accept)
         buttons.rejected.connect(dlg.reject)
         layout.addWidget(buttons)
@@ -1271,7 +1459,7 @@ class ABCFontEditor(QWidget):
             if len(metric_values) != 3:
                 raise ValueError("Metrics must contain padding_left glyph_width cell_width.")
             padding_left, glyph_width, cell_width = [int(v) for v in metric_values]
-            unknown_data = int(unknown_input.text().strip(), 0)
+            row_hint = int(unknown_input.text().strip(), 0)
 
             original_px = f"{glyph['px_x_start']} {glyph['px_y_start']} {glyph['px_x_end']} {glyph['px_y_end']}"
             if px_input.text().strip() != original_px:
@@ -1289,7 +1477,7 @@ class ABCFontEditor(QWidget):
                     raise ValueError("UV rect must contain x_start y_start x_end y_end.")
                 x0, y0, x1, y1 = [float(v) for v in uv_values]
 
-            if not (0 <= unknown_data <= 0xFFFF):
+            if not (0 <= row_hint <= 0xFFFF):
                 raise ValueError("Unknown must fit uint16.")
             if not (-32768 <= padding_left <= 32767 and 0 <= glyph_width <= 0xFFFF and 0 <= cell_width <= 0xFFFF):
                 raise ValueError("Metrics are outside supported ranges.")
@@ -1303,7 +1491,7 @@ class ABCFontEditor(QWidget):
             return
 
         data = bytearray(self.original_data)
-        struct.pack_into("<H", data, record_offset, unknown_data)
+        struct.pack_into("<H", data, record_offset, row_hint)
         struct.pack_into("<ffff", data, record_offset + 2, x0, y0, x1, y1)
         struct.pack_into("<hHH", data, record_offset + 18, padding_left, glyph_width, cell_width)
         self.original_data = bytes(data)
@@ -1327,6 +1515,7 @@ class ABCFontEditor(QWidget):
 
         text_edit = QTextEdit()
         text_edit.setPlaceholderText("Examples: ABC 0-9 U+0410-U+042F 0x20AC")
+        text_edit.setMaximumHeight(80)
         text_edit.setStyleSheet("background-color: #333; color: white;")
         layout.addWidget(text_edit)
 
@@ -1349,6 +1538,7 @@ class ABCFontEditor(QWidget):
         layout.addWidget(index_hint)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; }")
         buttons.accepted.connect(dlg.accept)
         buttons.rejected.connect(dlg.reject)
         layout.addWidget(buttons)
@@ -1488,7 +1678,7 @@ class ABCFontEditor(QWidget):
                 return
 
             # Check for required header fields
-            required_fields = {"glyph_height", "unknown_data_h1", "unknown_data_h2", "unknown_data_h3"}
+            required_fields = {"glyph_height", "unknown_data_h1", "unknown_data_h2", "line_height"}
             if not any(field in global_data for field in required_fields):
                 self.show_error("Error", "Invalid JSON: missing required header fields in 'global'")
                 return
@@ -1500,8 +1690,8 @@ class ABCFontEditor(QWidget):
                     struct.pack_into("<f", data, 8, float(global_data["unknown_data_h1"]))
                 if "unknown_data_h2" in global_data:
                     struct.pack_into("<f", data, 12, float(global_data["unknown_data_h2"]))
-                if "unknown_data_h3" in global_data:
-                    struct.pack_into("<f", data, 16, float(global_data["unknown_data_h3"]))
+                if "line_height" in global_data:
+                    struct.pack_into("<f", data, 16, float(global_data["line_height"]))
             except (ValueError, TypeError) as e:
                 self.show_error("Error", f"Invalid header data values: {str(e)}")
                 return
@@ -1552,12 +1742,12 @@ class ABCFontEditor(QWidget):
 
                 # Validate and write glyph data
                 try:
-                    unknown_data = int(glyph.get("unknown_data", struct.unpack_from("<H", data, i)[0]))
+                    row_hint = int(glyph.get("row_hint", struct.unpack_from("<H", data, i)[0]))
                     cell_width = int(glyph.get("cell_width", struct.unpack_from("<H", data, i + 22)[0]))
                     width_px = int(glyph.get("glyph_width", struct.unpack_from("<H", data, i + 20)[0]))
                     padding_left_val = int(glyph.get("padding_left", struct.unpack_from("<h", data, i + 18)[0]))
                     
-                    struct.pack_into("<H", data, i, unknown_data)
+                    struct.pack_into("<H", data, i, row_hint)
                     struct.pack_into("<H", data, i + 22, cell_width)
                     struct.pack_into("<ffff", data, i + 2, x0, y0, x1, y1)
                     struct.pack_into("<hH", data, i + 18, padding_left_val, width_px)
