@@ -793,7 +793,7 @@ class ABCFontEditor(QWidget):
         rect_input.setStyleSheet("background-color: #333; color: white;")
         rect_row.addWidget(rect_input)
         layout.addLayout(rect_row)
-        rect_hint = QLabel("px_x_start  px_y_start  px_x_end  px_y_end  ·  space-separated")
+        rect_hint = QLabel("Start X    Start Y    End X    End Y    ·    space-separated")
         rect_hint.setStyleSheet("color: #666; font-size: 10px; margin-left: 92px;")
         layout.addWidget(rect_hint)
 
@@ -804,7 +804,7 @@ class ABCFontEditor(QWidget):
         metrics_input.setStyleSheet("background-color: #333; color: white;")
         metrics_row.addWidget(metrics_input)
         layout.addLayout(metrics_row)
-        add_metrics_hint = QLabel("padding_left  glyph_width  cell_width  ·  space-separated")
+        add_metrics_hint = QLabel("Padding Left    Glyph Width    Cell Width    ·    space-separated")
         add_metrics_hint.setStyleSheet("color: #666; font-size: 10px; margin-left: 92px;")
         layout.addWidget(add_metrics_hint)
 
@@ -1095,7 +1095,7 @@ class ABCFontEditor(QWidget):
         px_input.setStyleSheet("background-color: #333; color: white;")
         px_row.addWidget(px_input)
         layout.addLayout(px_row)
-        px_hint = QLabel("px_x_start  px_y_start  px_x_end  px_y_end  ·  space-separated")
+        px_hint = QLabel("Start X    Start Y    End X    End Y    ·    space-separated")
         px_hint.setStyleSheet("color: #666; font-size: 10px; margin-left: 83px;")
         layout.addWidget(px_hint)
 
@@ -1109,7 +1109,7 @@ class ABCFontEditor(QWidget):
         uv_input.setStyleSheet("background-color: #333; color: white;")
         uv_row.addWidget(uv_input)
         layout.addLayout(uv_row)
-        uv_hint = QLabel("uv_x_start  uv_y_start  uv_x_end  uv_y_end  ·  space-separated")
+        uv_hint = QLabel("Start U (X)    Start V (Y)    End U (X)    End V (Y)    ·    space-separated")
         uv_hint.setStyleSheet("color: #666; font-size: 10px; margin-left: 83px;")
         layout.addWidget(uv_hint)
 
@@ -1123,7 +1123,7 @@ class ABCFontEditor(QWidget):
         metrics_input.setStyleSheet("background-color: #333; color: white;")
         metrics_row.addWidget(metrics_input)
         layout.addLayout(metrics_row)
-        metrics_hint = QLabel("padding_left  glyph_width  cell_width  ·  space-separated")
+        metrics_hint = QLabel("Padding Left    Glyph Width    Cell Width    ·    space-separated")
         metrics_hint.setStyleSheet("color: #666; font-size: 10px; margin-left: 83px;")
         layout.addWidget(metrics_hint)
 
