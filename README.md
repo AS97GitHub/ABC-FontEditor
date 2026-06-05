@@ -9,7 +9,7 @@
   - Character mappings
   - Unicode codepoints
   - Padding and width metrics
-  - Global/header parameters (WIP)
+  - Global font/header parameters
 - Import edited JSON data back into memory and save as a new `.abc` file
 - Add new glyphs and symbols by:
   - Character
@@ -65,7 +65,7 @@ python abc_font_editor.py
        - Padding
        - Glyph width
        - Cell width
-       - Unknown data field
+       - Row hint (service/debug value used by the editor)
     4. Confirm the changes
     5. Click **Save .abc** to write changes to disk
    
@@ -82,9 +82,16 @@ python abc_font_editor.py
 Example exported glyph entry:
 ```json
 {
+    "_note": {...}
+},
+{
+    "global": {...}
+},
+{
     "index": 5,
+    "row_hint": 0,
     "chars": ["A"],
-    "codepoints": [65],
+    "codepoints": ["U+0041"],
     "px_x_start": 12,
     "px_y_start": 0,
     "px_x_end": 28,
@@ -139,6 +146,5 @@ If the texture file is unavailable
     4. Pixel coordinate conversion and JSON export/import will still work correctly
 
 ## Notes
-- Glyph index `0` is protected and cannot be deleted
 - Changes are stored in memory until explicitly saved
 - `.dds` loading depends on Pillow DDS support
