@@ -1,3 +1,7 @@
+<p>
+  <img src="icon.ico" width="128">
+</p>
+
 # ABC Font Editor
 ### A desktop GUI tool for viewing and editing `.abc` binary font files from the FlatOut game series (FlatOut, FlatOut 2, FlatOut: Ultimate Carnage, FlatOut: Head On).
 
