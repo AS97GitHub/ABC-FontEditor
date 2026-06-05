@@ -1,9 +1,11 @@
 <table>
 <tr>
-<td>
+<td width="128">
+
 <p>
-  <img src="icon.ico" width="128">
+  <img src="icon.ico">
 </p>
+
 </td>
 <td>
 
@@ -14,8 +16,6 @@
 </td>
 </tr>
 </table>
-
-### A desktop GUI tool for viewing and editing `.abc` binary font files from the FlatOut game series (FlatOut, FlatOut 2, FlatOut: Ultimate Carnage, FlatOut: Head On).
 
 ## Features
 - Load and visualize `.abc` font files alongside their texture atlases (`.png` and supported `.dds` formats), with glyph rectangles drawn directly over the texture
