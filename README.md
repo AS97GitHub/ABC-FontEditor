@@ -1,6 +1,6 @@
 <table>
 <tr>
-<td width="128">
+<td width="170">
 
 <p>
   <img src="icon.ico">
