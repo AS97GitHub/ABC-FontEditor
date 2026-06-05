@@ -1,8 +1,20 @@
+<table>
+<tr>
+<td>
 <p>
   <img src="icon.ico" width="128">
 </p>
+</td>
+<td>
 
 # ABC Font Editor
+
+### A desktop GUI tool for viewing and editing `.abc` binary font files from the FlatOut game series (FlatOut, FlatOut 2, FlatOut: Ultimate Carnage, FlatOut: Head On).
+
+</td>
+</tr>
+</table>
+
 ### A desktop GUI tool for viewing and editing `.abc` binary font files from the FlatOut game series (FlatOut, FlatOut 2, FlatOut: Ultimate Carnage, FlatOut: Head On).
 
 ## Features
@@ -83,27 +95,29 @@ python abc_font_editor.py
       - Pixel coordinates
    4. Save the `.json` file
 
-Example exported glyph entry:
+Example exported JSON structure:
 ```json
-{
-    "_note": {...}
-},
-{
-    "global": {...}
-},
-{
-    "index": 5,
-    "row_hint": 0,
-    "chars": ["A"],
-    "codepoints": ["U+0041"],
-    "px_x_start": 12,
-    "px_y_start": 0,
-    "px_x_end": 28,
-    "px_y_end": 32,
-    "padding_left": 1,
-    "glyph_width": 15,
-    "cell_width": 17
-}
+[
+    {
+        "_note": {...}
+    },
+    {
+        "global": {...}
+    },
+    {
+        "index": 5,
+        "row_hint": 0,
+        "chars": ["A"],
+        "codepoints": ["U+0041"],
+        "px_x_start": 12,
+        "px_y_start": 0,
+        "px_x_end": 28,
+        "px_y_end": 32,
+        "padding_left": 1,
+        "glyph_width": 15,
+        "cell_width": 17
+    }
+]
 ```
 
 4. Importing edited glyphs
@@ -143,7 +157,8 @@ Example exported glyph entry:
     6. Click **Save .abc**
 
 7. Working without a texture
-If the texture file is unavailable
+
+    If the texture file is unavailable
     1. Load the `.abc` file only
     2. Enter the correct texture resolution manually (example: `512 x 512`)
     3. Click **Apply**
