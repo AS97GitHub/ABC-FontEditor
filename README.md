@@ -65,7 +65,7 @@ python abc_font_editor.py
        - Padding
        - Glyph width
        - Cell width
-       - Row hint (service/debug value used by the editor)
+       - Row hint (unused/unknown font parameter preserved by the editor)
     4. Confirm the changes
     5. Click **Save .abc** to write changes to disk
    
@@ -130,12 +130,12 @@ Example exported glyph entry:
        - Hexadecimal:
          `0x41 0x42`
        - Ranges:
-        ` A-Z
-         U+0410-U+042F`
+         `A-Z`
+         `U+0410-U+042F`
        - Glyph indexes:
          `12 15 20-30`
     4. Confirm deletion
-    5. The program automatically rebuilds the glyph table and charmap
+    5. The program automatically rebuilds the glyph table, charmap and updates header values
     6. Click **Save .abc**
 
 7. Working without a texture
