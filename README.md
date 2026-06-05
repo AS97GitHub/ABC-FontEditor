@@ -95,30 +95,30 @@ python abc_font_editor.py
       - Pixel coordinates
    4. Save the `.json` file
 
-Example exported JSON structure:
-```json
-[
-    {
-        "_note": {...}
-    },
-    {
-        "global": {...}
-    },
-    {
-        "index": 5,
-        "row_hint": 0,
-        "chars": ["A"],
-        "codepoints": ["U+0041"],
-        "px_x_start": 12,
-        "px_y_start": 0,
-        "px_x_end": 28,
-        "px_y_end": 32,
-        "padding_left": 1,
-        "glyph_width": 15,
-        "cell_width": 17
-    }
-]
-```
+   Example exported JSON structure:
+   ```json
+   [
+       {
+           "_note": {...}
+       },
+       {
+           "global": {...}
+       },
+       {
+           "index": 5,
+           "row_hint": 0,
+           "chars": ["A"],
+           "codepoints": ["U+0041"],
+           "px_x_start": 12,
+           "px_y_start": 0,
+           "px_x_end": 28,
+           "px_y_end": 32,
+           "padding_left": 1,
+           "glyph_width": 15,
+           "cell_width": 17
+       }
+   ]
+   ```
 
 4. Importing edited glyphs
     1. Edit the exported `.json` file
