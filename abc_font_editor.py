@@ -622,7 +622,6 @@ class ABCFontEditor(QWidget):
                 cp_val = [f"U+{cp:04X}" for cp in codepoints_list]
             item = {
                 "index": g["index"],
-                "hex": g["hex"],
                 "row_hint": g.get("row_hint", 0),  # tool artifact - texture row index as float16
                 "chars": chars_val,
                 "codepoints": cp_val,
