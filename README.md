@@ -1,5 +1,21 @@
+<table>
+<tr>
+<td width="170">
+
+<p>
+  <img src="icon.ico">
+</p>
+
+</td>
+<td>
+
 # ABC Font Editor
+
 ### A desktop GUI tool for viewing and editing `.abc` binary font files from the FlatOut game series (FlatOut, FlatOut 2, FlatOut: Ultimate Carnage, FlatOut: Head On).
+
+</td>
+</tr>
+</table>
 
 ## Features
 - Load and visualize `.abc` font files alongside their texture atlases (`.png` and supported `.dds` formats), with glyph rectangles drawn directly over the texture
@@ -9,7 +25,7 @@
   - Character mappings
   - Unicode codepoints
   - Padding and width metrics
-  - Global/header parameters (WIP)
+  - Global font/header parameters
 - Import edited JSON data back into memory and save as a new `.abc` file
 - Add new glyphs and symbols by:
   - Character
@@ -65,7 +81,7 @@ python abc_font_editor.py
        - Padding
        - Glyph width
        - Cell width
-       - Unknown data field
+       - Row hint (unused/unknown font parameter preserved by the editor)
     4. Confirm the changes
     5. Click **Save .abc** to write changes to disk
    
@@ -79,21 +95,30 @@ python abc_font_editor.py
       - Pixel coordinates
    4. Save the `.json` file
 
-Example exported glyph entry:
-```json
-{
-    "index": 5,
-    "chars": ["A"],
-    "codepoints": [65],
-    "px_x_start": 12,
-    "px_y_start": 0,
-    "px_x_end": 28,
-    "px_y_end": 32,
-    "padding_left": 1,
-    "glyph_width": 15,
-    "cell_width": 17
-}
-```
+   Example exported JSON structure:
+   ```json
+   [
+       {
+           "_note": {...}
+       },
+       {
+           "global": {...}
+       },
+       {
+           "index": 5,
+           "row_hint": 0,
+           "chars": ["A"],
+           "codepoints": ["U+0041"],
+           "px_x_start": 12,
+           "px_y_start": 0,
+           "px_x_end": 28,
+           "px_y_end": 32,
+           "padding_left": 1,
+           "glyph_width": 15,
+           "cell_width": 17
+       }
+   ]
+   ```
 
 4. Importing edited glyphs
     1. Edit the exported `.json` file
@@ -123,22 +148,22 @@ Example exported glyph entry:
        - Hexadecimal:
          `0x41 0x42`
        - Ranges:
-        ` A-Z
-         U+0410-U+042F`
+         `A-Z`
+         `U+0410-U+042F`
        - Glyph indexes:
          `12 15 20-30`
     4. Confirm deletion
-    5. The program automatically rebuilds the glyph table and charmap
+    5. The program automatically rebuilds the glyph table, charmap and updates header values
     6. Click **Save .abc**
 
 7. Working without a texture
-If the texture file is unavailable
+
+    If the texture file is unavailable
     1. Load the `.abc` file only
     2. Enter the correct texture resolution manually (example: `512 x 512`)
     3. Click **Apply**
     4. Pixel coordinate conversion and JSON export/import will still work correctly
 
 ## Notes
-- Glyph index `0` is protected and cannot be deleted
 - Changes are stored in memory until explicitly saved
 - `.dds` loading depends on Pillow DDS support
