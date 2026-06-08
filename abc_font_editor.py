@@ -1,12 +1,13 @@
-import os
+#!/usr/bin/env python3
+
 import struct
 import json
 import re
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QPushButton, QFileDialog, QVBoxLayout,
     QHBoxLayout, QGraphicsScene, QGraphicsView, QGraphicsPixmapItem,
-    QLineEdit, QMessageBox, QComboBox, QSpinBox, QDialog, QDialogButtonBox,
-    QSizePolicy, QTextEdit, QTableWidget, QTableWidgetItem, QHeaderView,
+    QLineEdit, QMessageBox, QSpinBox, QDialog, QDialogButtonBox,
+    QTextEdit, QTableWidget, QTableWidgetItem, QHeaderView,
     QCheckBox, QAbstractItemView,
 )
 from PyQt5.QtGui import QPixmap, QImage, QPainter, QColor, QPen, QFont, QIcon
@@ -48,6 +49,9 @@ class ABCFontEditor(QWidget):
         msg_box.setModal(True)
         msg_box.raise_()
         msg_box.activateWindow()
+        btn = msg_box.button(QMessageBox.Ok)
+        if btn:
+            btn.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; }")
         msg_box.exec_()
 
     def show_warning(self, title, message):
@@ -60,6 +64,9 @@ class ABCFontEditor(QWidget):
         msg_box.setModal(True)
         msg_box.raise_()
         msg_box.activateWindow()
+        btn = msg_box.button(QMessageBox.Ok)
+        if btn:
+            btn.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; }")
         msg_box.exec_()
 
     def show_info(self, title, message):
@@ -72,6 +79,9 @@ class ABCFontEditor(QWidget):
         msg_box.setModal(True)
         msg_box.raise_()
         msg_box.activateWindow()
+        btn = msg_box.button(QMessageBox.Ok)
+        if btn:
+            btn.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; }")
         msg_box.exec_()
 
     def init_ui(self):
@@ -166,6 +176,7 @@ class ABCFontEditor(QWidget):
         self.zoom_label = QLabel("100%")
         self.zoom_label.setFixedWidth(50)
         self.zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.zoom_label.setStyleSheet("background-color: #202020; color: white;")
         top_row.addWidget(self.zoom_label)
 
         self.zoom_in_btn = QPushButton("+")
@@ -189,6 +200,7 @@ class ABCFontEditor(QWidget):
         self.scene.setBackgroundBrush(QColor(60, 60, 60))
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.Antialiasing)
+        self.view.viewport().setStyleSheet("background-color: #3c3c3c;")
         self.view.mouseDoubleClickEvent = self.handle_view_double_click
         layout.addWidget(self.view, stretch=1)
 
@@ -980,11 +992,6 @@ class ABCFontEditor(QWidget):
         self.save_abc_btn.setEnabled(True)
         self.extract_glyphs(self.offset_dec, manual=False)
         self.offsets_label.setText("")
-
-    def reload_abc_data(self, path):
-        with open(path, "rb") as f:
-            self.original_data = f.read()
-        self.refresh_abc_from_memory(dirty=False)
 
     def save_abc(self):
         if not self.original_data:
@@ -1886,12 +1893,7 @@ class ABCFontEditor(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    # Load icon — works both from source and PyInstaller bundle
-    if getattr(sys, "frozen", False):
-        base_path = sys._MEIPASS
-    else:
-        base_path = os.path.dirname(os.path.abspath(__file__))
-    # Write icon from embedded base64 to temp file
+    app.setStyleSheet("QToolTip { background-color: #333333; color: white; border: 1px solid #555555; }")
     icon = None
     try:
         icon_bytes = base64.b64decode(ICON_B64)
