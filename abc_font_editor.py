@@ -1674,7 +1674,7 @@ class ABCFontEditor(QWidget):
             self.show_warning("Error", "Load an .abc file first.")
             return
 
-        json_path, _ = QFileDialog.getOpenFileName(self, "Import JSON", "", "JSON Files (*.json)")
+        json_path, _ = QFileDialog.getOpenFileName(self, "Import JSON", "", "JSON Files (*.json *.JSON)")
         if not json_path:
             return
 
