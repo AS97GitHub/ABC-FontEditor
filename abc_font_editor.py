@@ -250,12 +250,36 @@ class ABCFontEditor(QWidget):
         self.global_params_btn.clicked.connect(self.edit_global_params)
         self.save_abc_btn.clicked.connect(self.save_abc)
 
+        
     def load_texture(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Open Texture", "", "Images (*.dds *.png)")
+        filter_str = (
+            "Images with Alpha Channel (*.dds *.DDS *.png *.PNG *.tga *.TGA);;"
+            "Images without Alpha Channel (*.jpg *.JPG *.jpeg *.JPEG *.bmp *.BMP);;"
+            "All Files (*)"
+        )
+
+        path, selected_filter = QFileDialog.getOpenFileName(
+            self,
+            "Open Texture",
+            "",
+            filter_str,
+            "Images with Alpha Channel (*.dds *.DDS *.png *.PNG *.tga *.TGA)"
+        )
+
         if not path:
             return
+
         self.texture_path = path
-        image = Image.open(path)
+
+        try:
+            image = Image.open(path)
+        except Exception as e:
+            self.show_error(
+                "Texture Error",
+                f"Failed to load texture:\n{e}"
+            )
+            return
+
         self.texture_size = image.size
 
         # Update texture resolution inputs with actual image size
@@ -302,7 +326,7 @@ class ABCFontEditor(QWidget):
         self.view.centerOn(tw * self.zoom / 2, th * self.zoom / 2)
 
     def load_abc(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Open ABC", "", "ABC Files (*.abc)")
+        path, _ = QFileDialog.getOpenFileName(self, "Open ABC", "", "ABC Files (*.abc *.ABC)")
         if not path:
             return
         self.abc_path = path
