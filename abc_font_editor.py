@@ -251,6 +251,15 @@ class ABCFontEditor(QWidget):
         for btn in [self.zoom_out_btn, self.zoom_in_btn, self.fit_view_btn]:
             btn.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; } QPushButton:disabled { background-color: #2a2a2a; color: #666666; }")
 
+        # Smooth Texture
+        self.smooth_texture_cb = QCheckBox("Smooth Texture")
+        self.smooth_texture_cb.setChecked(True)
+        self.smooth_texture_cb.toggled.connect(self.toggle_smooth_texture)
+        
+        top_row.addSpacing(20)
+        
+        top_row.addWidget(self.smooth_texture_cb)
+
         layout.addLayout(top_row)
 
         # Canvas
@@ -312,12 +321,6 @@ class ABCFontEditor(QWidget):
         self.add_symbol_btn.clicked.connect(self.add_symbol)
         self.global_params_btn.clicked.connect(self.edit_global_params)
         self.save_abc_btn.clicked.connect(self.save_abc)
-
-        self.smooth_texture_cb = QCheckBox("Smooth Texture")
-        self.smooth_texture_cb.setChecked(True)
-        self.smooth_texture_cb.toggled.connect(self.toggle_smooth_texture)
-        layout.addWidget(self.smooth_texture_cb)
-
 
     def load_texture(self):
         filter_str = (
@@ -1909,7 +1912,7 @@ class ABCFontEditor(QWidget):
             hover_pen.setCosmetic(True)
 
             hover_brush = QBrush(QColor(120, 255, 120, 45))
-            font = QFont("Arial", 8)
+            font = QFont("Arial, Liberation Sans, DejaVu Sans", 8)
             font.setBold(True)
 
             for g in self.glyphs:
@@ -2035,6 +2038,6 @@ if __name__ == "__main__":
     editor = ABCFontEditor()
     if icon and not icon.isNull():
         editor.setWindowIcon(icon)
-    editor.resize(960, 720)
+    editor.resize(1070, 720)
     editor.show()
     sys.exit(app.exec_())
