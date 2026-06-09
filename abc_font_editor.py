@@ -1888,16 +1888,18 @@ class ABCFontEditor(QWidget):
     def refresh_view(self):
         self.scene.clear()
         
-        # Add texture if available
-        self.pix_item = QGraphicsPixmapItem(self.pixmap)
+        if hasattr(self, 'pixmap') and self.pixmap is not None and not self.pixmap.isNull():
+            self.pix_item = QGraphicsPixmapItem(self.pixmap)
 
-        self.pix_item.setTransformationMode(
-            Qt.TransformationMode.SmoothTransformation
-            if self.smooth_texture_cb.isChecked()
-            else Qt.TransformationMode.FastTransformation
-        )
+            self.pix_item.setTransformationMode(
+                Qt.TransformationMode.SmoothTransformation
+                if self.smooth_texture_cb.isChecked()
+                else Qt.TransformationMode.FastTransformation
+            )
 
-        self.scene.addItem(self.pix_item)
+            self.scene.addItem(self.pix_item)
+        else:
+            self.pix_item = None
 
         # Draw glyphs regardless of texture presence
         if self.glyphs:
@@ -2021,19 +2023,17 @@ class ABCFontEditor(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyleSheet("QToolTip { background-color: #333333; color: white; border: 1px solid #555555; }")
-    icon = None
     try:
-        icon_bytes = base64.b64decode(ICON_B64)
-        tmp = tempfile.NamedTemporaryFile(suffix=".ico", delete=False)
-        tmp.write(icon_bytes)
-        tmp.close()
-        icon = QIcon(tmp.name)
+        from PyQt5.QtGui import QPixmap
+        pixmap = QPixmap()
+        pixmap.loadFromData(base64.b64decode(ICON_B64))
+        icon = QIcon(pixmap)
     except Exception:
-        pass
-    if icon:
+        icon = None
+    if icon and not icon.isNull():
         app.setWindowIcon(icon)
     editor = ABCFontEditor()
-    if icon:
+    if icon and not icon.isNull():
         editor.setWindowIcon(icon)
     editor.resize(960, 720)
     editor.show()
