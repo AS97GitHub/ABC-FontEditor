@@ -157,7 +157,7 @@ class ABCFontEditor(QWidget):
         # Offset input with classic spin buttons
         top_row.addWidget(QLabel("Offset (dec):"))
         self.offset_input = QLineEdit("0")
-        self.offset_input.setFixedWidth(80)
+        self.offset_input.setFixedWidth(70)
         self.offset_input.setStyleSheet("background-color: #333; color: white;")
         top_row.addWidget(self.offset_input)
 
@@ -189,7 +189,7 @@ class ABCFontEditor(QWidget):
         top_row.addWidget(self.apply_offset_btn)
         
         # Add spacing after offset controls
-        top_row.addSpacing(20)
+        top_row.addSpacing(15)
         
         # Texture resolution input (moved before glyph count)
         top_row.addWidget(QLabel("Texture:"))
@@ -212,12 +212,12 @@ class ABCFontEditor(QWidget):
         top_row.addWidget(self.apply_texture_btn)
         
         # Add spacing after texture controls
-        top_row.addSpacing(20)
+        top_row.addSpacing(15)
         
         top_row.addWidget(self.glyph_count_label)
         
         # Add spacing after glyph count
-        top_row.addSpacing(20)
+        top_row.addSpacing(15)
 
         for btn in [self.offset_up, self.offset_down, self.apply_offset_btn, self.apply_texture_btn]:
             btn.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; } QPushButton:disabled { background-color: #2a2a2a; color: #666666; }")
@@ -232,7 +232,7 @@ class ABCFontEditor(QWidget):
         top_row.addWidget(self.zoom_out_btn)
 
         self.zoom_label = QLabel("100%")
-        self.zoom_label.setFixedWidth(50)
+        self.zoom_label.setFixedWidth(30)
         self.zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.zoom_label.setStyleSheet("background-color: #202020; color: white;")
         top_row.addWidget(self.zoom_label)
@@ -256,7 +256,7 @@ class ABCFontEditor(QWidget):
         self.smooth_texture_cb.setChecked(True)
         self.smooth_texture_cb.toggled.connect(self.toggle_smooth_texture)
         
-        top_row.addSpacing(20)
+        top_row.addSpacing(15)
         
         top_row.addWidget(self.smooth_texture_cb)
 
@@ -2038,6 +2038,6 @@ if __name__ == "__main__":
     editor = ABCFontEditor()
     if icon and not icon.isNull():
         editor.setWindowIcon(icon)
-    editor.resize(1070, 720)
+    editor.resize(1020, 720)
     editor.show()
     sys.exit(app.exec_())
