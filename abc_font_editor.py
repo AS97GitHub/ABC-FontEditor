@@ -146,50 +146,11 @@ class ABCFontEditor(QWidget):
         self.setStyleSheet("background-color: #202020; color: white;")
         layout = QVBoxLayout(self)
 
-        # Combined offset display in one label
-        self.offsets_label = QLabel("")
-        self.offsets_label.setStyleSheet("color: #aaa;")
-        self.offsets_label.setVisible(False)
-        layout.addWidget(self.offsets_label)
-
         top_row = QHBoxLayout()
 
-        # Offset input with classic spin buttons
-        top_row.addWidget(QLabel("Offset (dec):"))
-        self.offset_input = QLineEdit("0")
-        self.offset_input.setFixedWidth(70)
-        self.offset_input.setStyleSheet("background-color: #333; color: white;")
-        top_row.addWidget(self.offset_input)
-
-        self.offset_spin = QSpinBox()
-        self.offset_spin.setButtonSymbols(QSpinBox.PlusMinus)
-        self.offset_spin.setRange(0, 0xFFFFFF)
-        self.offset_spin.setStyleSheet("QSpinBox { background-color: #333; color: white; }")
-        self.offset_spin.setFixedWidth(20)
-        self.offset_spin.setVisible(False)
-        top_row.addWidget(self.offset_spin)
-
-        self.offset_up = QPushButton("▲")
-        self.offset_down = QPushButton("▼")
-        self.offset_up.setFixedWidth(25)
-        self.offset_down.setFixedWidth(25)
-        self.offset_up.clicked.connect(self.increment_offset)
-        self.offset_up.clicked.connect(self.apply_offset)
-        self.offset_down.clicked.connect(self.decrement_offset)
-        self.offset_down.clicked.connect(self.apply_offset)
-        top_row.addWidget(self.offset_up)
-        top_row.addWidget(self.offset_down)
-
-        self.apply_offset_btn = QPushButton("Apply")
         self.glyph_count_label = QLabel("Glyphs: 0")
         self.glyph_count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.glyph_count_label.setStyleSheet("color: white;")
-        self.apply_offset_btn.setFixedWidth(60)
-        self.apply_offset_btn.clicked.connect(self.apply_offset)
-        top_row.addWidget(self.apply_offset_btn)
-        
-        # Add spacing after offset controls
-        top_row.addSpacing(15)
         
         # Texture resolution input (moved before glyph count)
         top_row.addWidget(QLabel("Texture:"))
@@ -212,14 +173,14 @@ class ABCFontEditor(QWidget):
         top_row.addWidget(self.apply_texture_btn)
         
         # Add spacing after texture controls
-        top_row.addSpacing(15)
+        top_row.addSpacing(30)
         
         top_row.addWidget(self.glyph_count_label)
         
         # Add spacing after glyph count
-        top_row.addSpacing(15)
+        top_row.addSpacing(30)
 
-        for btn in [self.offset_up, self.offset_down, self.apply_offset_btn, self.apply_texture_btn]:
+        for btn in [self.apply_texture_btn]:
             btn.setStyleSheet("QPushButton { background-color: #333333; color: white; } QPushButton:hover { background-color: #444444; } QPushButton:disabled { background-color: #2a2a2a; color: #666666; }")
 
         top_row.addStretch()
@@ -256,7 +217,7 @@ class ABCFontEditor(QWidget):
         self.smooth_texture_cb.setChecked(True)
         self.smooth_texture_cb.toggled.connect(self.toggle_smooth_texture)
         
-        top_row.addSpacing(15)
+        top_row.addSpacing(30)
         
         top_row.addWidget(self.smooth_texture_cb)
 
@@ -438,13 +399,9 @@ class ABCFontEditor(QWidget):
         self.unknown_data_h2 = struct.unpack("<f", self.original_data[12:16])[0]
         self.line_height = struct.unpack("<f", self.original_data[16:20])[0]
         self.offset_dec = self.charmap_end + 2  # First glyph offset
-        self.offset_input.setText(str(self.offset_dec))
         self.manual_offset = False
         self.dirty = False
         self.extract_glyphs(self.offset_dec, manual=False)
-
-        # Update combined offset label (hidden)
-        self.offsets_label.setText("")
 
         self.charmap_table_btn.setEnabled(True)
         self.global_params_btn.setEnabled(True)
@@ -1086,12 +1043,10 @@ class ABCFontEditor(QWidget):
         self.unknown_data_h2 = struct.unpack("<f", self.original_data[12:16])[0]
         self.line_height = struct.unpack("<f", self.original_data[16:20])[0]
         self.offset_dec = self.charmap_end + 2
-        self.offset_input.setText(str(self.offset_dec))
         self.manual_offset = False
         self.dirty = dirty
         self.save_abc_btn.setEnabled(True)
         self.extract_glyphs(self.offset_dec, manual=False)
-        self.offsets_label.setText("")
 
     def save_abc(self):
         if not self.original_data:
@@ -1966,32 +1921,6 @@ class ABCFontEditor(QWidget):
 
         self.view.viewport().update()
 
-    def increment_offset(self):
-        try:
-            val = int(self.offset_input.text())
-            self.offset_input.setText(str(val + 1))
-        except ValueError:
-            self.show_warning("Error", "Invalid offset value.")
-
-    def decrement_offset(self):
-        try:
-            val = int(self.offset_input.text())
-            self.offset_input.setText(str(max(0, val - 1)))
-        except ValueError:
-            self.show_warning("Error", "Invalid offset value.")
-
-    def apply_offset(self):
-        try:
-            offset = int(self.offset_input.text())
-            self.offset_dec = offset
-            self.manual_offset = True
-            self.extract_glyphs(offset, manual=True)
-
-            if not self.glyphs:
-                self.show_warning("No Glyphs", "No valid glyphs found at this offset.")
-        except Exception as e:
-            self.show_warning("Invalid", "Invalid decimal offset.")
-
     def apply_texture_resolution(self):
         """Apply manually entered texture resolution"""
         try:
@@ -2038,6 +1967,6 @@ if __name__ == "__main__":
     editor = ABCFontEditor()
     if icon and not icon.isNull():
         editor.setWindowIcon(icon)
-    editor.resize(1020, 720)
+    editor.resize(960, 720)
     editor.show()
     sys.exit(app.exec_())
